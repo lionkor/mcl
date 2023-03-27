@@ -74,7 +74,6 @@ function(set_project_warnings project_name)
             -Werror=missing-field-initializers
             -Werror=ctor-dtor-privacy
             -Werror=switch-enum
-            -Werror=switch-default
             -Werror=unused-result
             -Werror=implicit-fallthrough
             -Wmissing-include-dirs
