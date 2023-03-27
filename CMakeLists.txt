@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 include(cmake/Vcpkg.cmake) # needs to happen before project()
 
 project(
-    "MY_PROJECT" # replace this
+    "mcl"
     VERSION 0.1.0
     LANGUAGES CXX
 )
@@ -17,7 +17,9 @@ include(cmake/Git.cmake)
 ### SETTINGS ###
 
 # add all headers (.h, .hpp) to this
-set(PRJ_HEADERS )
+set(PRJ_HEADERS 
+    src/logging.h
+    )
 # add all source files (.cpp) to this, except the one with main()
 set(PRJ_SOURCES )
 # set the source file containing main()
@@ -35,11 +37,13 @@ set(PRJ_LIBRARIES
     fmt::fmt
     doctest::doctest
     Threads::Threads
+    spdlog::spdlog
 )
 
 # add dependency find_package calls and similar here
 find_package(fmt CONFIG REQUIRED)
 find_package(doctest CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
 
 # to enable multithreading and the Threads::Threads dependency
 include(FindThreads)
