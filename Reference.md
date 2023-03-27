@@ -1,5 +1,7 @@
 # MCL Reference
 
+# Language
+
 ## "Registers"
 
 - `pc`: Program counter
@@ -45,3 +47,17 @@ dup		duplicates the value on the top of the stack.
 		++pc
 		++st
 ```
+
+# Bytecode
+
+MCL is represented by a very simple bytecode.
+
+An instruction looks as follows:
+
+```
+[ 00 0000000000000000 ]
+  op      value
+```
+
+That is, one byte instruction, and 7 bytes value.
+Each argument, e.g. the IMM of the `push` instruction, is thus at most a 56 bit integer.
