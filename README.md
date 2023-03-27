@@ -8,8 +8,6 @@ You can find the **full language reference** here: [Reference.md](./Reference.md
 
 Find more examples in the [examples](./examples) directory.
 
-### Arithmetic
-
 Adding 123 and 456:
 ```nasm
 push 123
@@ -38,5 +36,6 @@ push 42
 dup
 mul
 print
+halt
 ```
 -> `84`
