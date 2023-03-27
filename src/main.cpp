@@ -21,6 +21,7 @@ enum Op : uint8_t {
     MOD,
     PRINT,
     HALT,
+    DUP,
 };
 
 union Instr {
@@ -103,6 +104,10 @@ static bool run_bytecode(const std::vector<Instr> bytecode) {
         case HALT:
             running = false;
             break;
+        case DUP:
+            stack[st] = stack[st - 1];
+            ++st;
+            break;
         }
         ++pc;
     }
@@ -152,15 +157,6 @@ int main(int argc, char** argv) {
                 // parse right as integer
                 auto val = std::stoull(right, nullptr);
                 instr.s.val = val;
-                if (left == "sub") {
-                    instr.s.op = SUB;
-                } else if (left == "div") {
-                    instr.s.op = DIV;
-                } else if (left == "mult") {
-                    instr.s.op = MULT;
-                } else if (left == "mod") {
-                    instr.s.op = MOD;
-                }
             }
             if (left == "push") {
                 instr.s.op = PUSH;
@@ -172,7 +168,18 @@ int main(int argc, char** argv) {
                 instr.s.op = PRINT;
             } else if (left == "halt") {
                 instr.s.op = HALT;
+            } else if (left == "sub") {
+                instr.s.op = SUB;
+            } else if (left == "div") {
+                instr.s.op = DIV;
+            } else if (left == "mul") {
+                instr.s.op = MULT;
+            } else if (left == "mod") {
+                instr.s.op = MOD;
+            } else if (left == "dup") {
+                instr.s.op = DUP;
             }
+
             if (instr.s.op == INVALID) {
                 fmt::print("invalid operation: '{}'\n", left);
                 return 1;
