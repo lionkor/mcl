@@ -6,6 +6,8 @@ You can find the **full language reference** here: [Reference.md](./Reference.md
 
 ## Examples
 
+Find more examples in the [examples](./examples) directory.
+
 ### Arithmetic
 
 ```nasm
@@ -26,4 +28,4 @@ mul
 print
 halt
 ```
--> 
+-> `11`
