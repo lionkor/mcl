@@ -2,6 +2,8 @@
 
 "My concise language" is a language which is purely stack-based, and looks reminiscent of some assembly dialects.
 
+You can find the **full language reference** here: [Reference.md](./Reference.md)
+
 ## Examples
 
 ### Arithmetic
