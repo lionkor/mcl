@@ -1,0 +1,9 @@
+push 1
+:start
+push 1
+add
+dup
+push 10000000
+jn :start
+halt
+

@@ -49,6 +49,9 @@ dup		duplicates the value on the top of the stack.
 		++st
 swap		swaps the top 2 values on the stack with each other.
 		++pc
+over		duplicates the value at 1-depth on the stack.
+		++pc
+		++st
 jmp <ADDR/LBL>	jumps to the specified address or label.
 		pc = <ADDR/LBL>
 je,jn,jl,jg,	jumps to the specified address or label IF the condition is satisfied.

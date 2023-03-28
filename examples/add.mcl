@@ -1,0 +1,5 @@
+push 123
+push 456
+add
+print
+halt

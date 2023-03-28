@@ -1,0 +1,5 @@
+push 42
+dup
+mul
+print
+halt

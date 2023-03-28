@@ -1,0 +1,26 @@
+:start
+push 10001231
+push 1
+
+:loop
+push 1
+add
+over
+over
+je :prime
+over
+over
+mod
+push 0
+je :not_prime
+jmp :loop
+
+:not_prime
+push 0
+print
+halt
+
+:prime
+push 1
+print
+halt

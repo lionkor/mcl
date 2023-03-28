@@ -12,19 +12,65 @@
 #include <unordered_map>
 #include <vector>
 
+#ifdef _DEBUG
+#define DEBUG_PRINT(pc, stack, st, op, aval)                                                                 \
+    do {                                                                                                     \
+        fmt::print("STACK: {:4} {} {} | ", pc, to_string(op), aval);                                         \
+        for (const auto& val : std::vector<int64_t>(stack.begin(), stack.begin() + static_cast<long>(st))) { \
+            fmt::print("{} ", val);                                                                          \
+        }                                                                                                    \
+        fmt::print("\n");                                                                                    \
+    } while (false)
+#else
+#define DEBUG_PRINT(pc, stack, st, op, aval)
+#endif
+
+static inline int64_t get(const std::vector<int64_t>& stack, size_t st, int64_t offset) {
+#ifdef _DEBUG
+    if ((offset < 0 && size_t(std::abs(offset)) > st) || size_t(int64_t(st) + offset) >= stack.size()) {
+        fmt::print("STACK CHECK FAILED in get: {}+({}) is not a valid stack position. Aborting.\n", st, offset);
+        std::abort();
+    }
+#endif
+    st = size_t(int64_t(st) + offset);
+    return stack[st];
+}
+
+static inline void set(std::vector<int64_t>& stack, size_t st, int64_t offset, int64_t value) {
+#ifdef _DEBUG
+    if ((offset < 0 && size_t(std::abs(offset)) > st) || size_t(int64_t(st) + offset) >= stack.size()) {
+        fmt::print("STACK CHECK FAILED in set: {}+({}) is not a valid stack position. Aborting.\n", st, offset);
+        std::abort();
+    }
+#endif
+    st = size_t(int64_t(st) + offset);
+    stack[st] = value;
+}
+
+static inline void move_stack_top(size_t& st, int64_t by) {
+#ifdef _DEBUG
+    if (by < 0 && size_t(std::abs(by)) > st) {
+        fmt::print("STACK CHECK FAILED in move_stack_top: {}+({}) is an invalid stack position. Aborting.\n", st, by);
+        std::abort();
+    }
+#endif
+    st = size_t(int64_t(st) + by);
+}
+
 enum Op : uint8_t {
     INVALID = 0x00,
     PUSH,
     POP,
     ADD,
     SUB,
-    MULT,
+    MUL,
     DIV,
     MOD,
     PRINT,
     HALT,
     DUP,
     SWAP,
+    OVER,
 
     // keep these at the end
     JE,
@@ -36,6 +82,51 @@ enum Op : uint8_t {
     JMP,
 };
 
+static std::string_view to_string(Op op) {
+    switch (op) {
+    case INVALID:
+        return "invalid";
+    case PUSH:
+        return "push";
+    case POP:
+        return "pop";
+    case ADD:
+        return "add";
+    case SUB:
+        return "sub";
+    case MUL:
+        return "mul";
+    case DIV:
+        return "div";
+    case MOD:
+        return "mod";
+    case PRINT:
+        return "print";
+    case HALT:
+        return "halt";
+    case DUP:
+        return "dup";
+    case SWAP:
+        return "swap";
+    case OVER:
+        return "over";
+    case JE:
+        return "je";
+    case JN:
+        return "jn";
+    case JG:
+        return "jg";
+    case JL:
+        return "jl";
+    case JGE:
+        return "jge";
+    case JLE:
+        return "jle";
+    case JMP:
+        return "jmp";
+    }
+}
+
 union Instr {
     struct {
         Op op : 8;
@@ -45,85 +136,103 @@ union Instr {
 };
 static_assert(sizeof(Instr) == sizeof(uint64_t));
 
-static bool run_bytecode(const std::vector<Instr> bytecode) {
+static bool run_bytecode(std::vector<Instr>&& bytecode) {
     size_t pc = 0;
     size_t st = 0;
     std::vector<int64_t> stack;
-    stack.resize(4096, 0);
+    stack.resize(4096);
+    // terminate the end to avoid out-of-range pc
+    bytecode.push_back(Instr{.s={.op=HALT, .val =0}});
 
     bool running = true;
     while (running) {
-        if (pc >= bytecode.size()) [[unlikely]] {
-            fmt::print("program counter ran off the end of the program, forgot to HALT?\n");
-            return false;
-        }
-        auto op = bytecode[pc].s.op;
+        const auto& op = bytecode[pc].s.op;
+#ifdef _DEBUG
+        const auto& arg_val = bytecode[pc].s.val;
+        fmt::print("---\nPC: {:4}, OP: {:5}, VAL: {:4}\n", pc, to_string(op), arg_val);
+        auto old_pc = pc;
+#endif
         switch (op) {
         case INVALID:
             fmt::print("INVALID encountered, exiting\n");
             return false;
         case PUSH:
-            stack[st++] = bytecode[pc].s.val;
+            set(stack, st, 0, bytecode[pc].s.val);
+            move_stack_top(st, 1);
             break;
         case POP:
-            --st;
+            move_stack_top(st, -1);
             break;
         case ADD: {
-            int64_t a = stack[st - 2];
-            int64_t b = stack[st - 1];
-            st -= 2;
-            stack[st++] = a + b;
+            int64_t a = get(stack, st, -2);
+            int64_t b = get(stack, st, -1);
+            move_stack_top(st, -1);
+            set(stack, st, -1, a + b);
             break;
         }
         case SUB: {
-            int64_t a = stack[st - 2];
-            int64_t b = stack[st - 1];
-            st -= 2;
-            stack[st++] = a - b;
+            int64_t a = get(stack, st, -2);
+            int64_t b = get(stack, st, -1);
+            move_stack_top(st, -1);
+            set(stack, st, -1, a - b);
             break;
         }
-        case MULT: {
-            int64_t a = stack[st - 2];
-            int64_t b = stack[st - 1];
-            st -= 2;
-            stack[st++] = a * b;
+        case MUL: {
+            int64_t a = get(stack, st, -2);
+            int64_t b = get(stack, st, -1);
+            move_stack_top(st, -1);
+            set(stack, st, -1, a * b);
             break;
         }
         case DIV: {
-            int64_t a = stack[st - 2];
-            int64_t b = stack[st - 1];
+            int64_t a = get(stack, st, -2);
+            int64_t b = get(stack, st, -1);
             if (b == 0) [[unlikely]] {
                 fmt::print("exception: DIV by 0 at pc={}\n", pc);
                 return false;
             }
-            st -= 2;
-            stack[st++] = a / b;
+            move_stack_top(st, -1);
+            set(stack, st, -1, a / b);
             break;
         }
         case MOD: {
-            int64_t a = stack[st - 2];
-            int64_t b = stack[st - 1];
+            int64_t a = get(stack, st, -2);
+            int64_t b = get(stack, st, -1);
             if (b == 0) [[unlikely]] {
                 fmt::print("exception: MOD by 0 at pc={}\n", pc);
                 return false;
             }
-            st -= 2;
-            stack[st++] = a % b;
+            move_stack_top(st, -1);
+            set(stack, st, -1, a % b);
             break;
         }
         case PRINT:
-            fmt::print("{}\n", int64_t(stack[st - 1]));
+            fmt::print("{}\n", get(stack, st, -1));
             break;
         case HALT:
             running = false;
             break;
-        case DUP:
-            stack[st] = stack[st - 1];
-            ++st;
+        case DUP: {
+            auto value = get(stack, st, -1);
+            set(stack, st, 0, value);
+            move_stack_top(st, 1);
             break;
+        }
         case SWAP:
+#ifdef _DEBUG
+            if (2 > st) {
+                fmt::print("STACK CHECK FAILED: swap called with <2 elements on the stack.\n");
+                std::abort();
+            }
+#endif
             std::swap(stack[st - 2], stack[st - 1]);
             break;
+        case OVER: {
+            auto value = get(stack, st, -2);
+            move_stack_top(st, +1);
+            set(stack, st, -1, value);
+            break;
+        }
         case JE: {
             int64_t a = stack[st - 2];
             int64_t b = stack[st - 1];
@@ -195,6 +304,7 @@ static bool run_bytecode(const std::vector<Instr> bytecode) {
             break;
         }
         }
+        DEBUG_PRINT(old_pc, stack, st, op, arg_val);
         // increment pc if not a JUMP instr
         // unlikely since most instrs are not jumps
         if (op < JE) [[unlikely]] {
@@ -335,11 +445,15 @@ int main(int argc, char** argv) {
                 } else if (left == "div") {
                     instr.s.op = DIV;
                 } else if (left == "mul") {
-                    instr.s.op = MULT;
+                    instr.s.op = MUL;
                 } else if (left == "mod") {
                     instr.s.op = MOD;
                 } else if (left == "dup") {
                     instr.s.op = DUP;
+                } else if (left == "over") {
+                    instr.s.op = OVER;
+                } else if (left == "swap") {
+                    instr.s.op = SWAP;
                 }
 
                 if (instr.s.op == INVALID) {
@@ -376,7 +490,7 @@ int main(int argc, char** argv) {
     }
 
     if (!compile_only) {
-        if (!run_bytecode(bytecode)) {
+        if (!run_bytecode(std::move(bytecode))) {
             fmt::print("error while executing bytecode, execution stopped\n");
             return 1;
         }

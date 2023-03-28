@@ -1,0 +1,14 @@
+push 12
+push 13
+jl :ok
+jmp :bad
+
+:ok
+push 0
+print
+halt
+
+:bad
+push 1
+print
+halt
