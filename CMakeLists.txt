@@ -18,10 +18,18 @@ include(cmake/Git.cmake)
 
 # add all headers (.h, .hpp) to this
 set(PRJ_HEADERS 
+    src/compiler.h
+    src/instruction.h
     src/logging.h
+    src/source_location.h
+    src/abstract_instruction.h
+    src/error.h
     )
 # add all source files (.cpp) to this, except the one with main()
-set(PRJ_SOURCES )
+set(PRJ_SOURCES 
+    src/instruction.cpp
+    src/compiler.cpp
+    )
 # set the source file containing main()
 set(PRJ_MAIN src/main.cpp)
 # set the source file containing the test's main
