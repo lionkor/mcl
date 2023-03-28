@@ -1,9 +1,8 @@
 {
-  "name": "my-project",
-  "version-string": "0.1.0",
+  "name": "mcl",
+  "version-string": "1.0.0",
   "dependencies": [
       "fmt",
-      "doctest",
-      "spdlog"
+      "doctest"
   ]
 }
