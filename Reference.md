@@ -22,43 +22,25 @@ All instructions:
 
 ```
 push <IMM>	pushes value on the stack.
-		++pc
-		++st
 pop		pops the top value from the stack.
-		++pc
-		--st
 print		prints the top value of the stack and pops it.
 		side effect: prints the value to stdout, followed by a 
 		newline.
-		++pc
-		--st
 add, sub, mul	adds/subtracts/multiplies the two top values on the stack, 
 		and pops them off the stack. pushes the result of the operation
 		on the stack.
-		++pc
-		--st
 div, mod	divides or performs modulo on the two top values on the stack, 
 		and pops them off the stack. pushes the result of the operation
 		on the stack. if the second argument is zero, it will HALT the
 		program and show an error.
 		side effect: possibly HALTs.
-		++pc
-		--st
 dup		duplicates the value on the top of the stack.
-		++pc
-		++st
 swap		swaps the top 2 values on the stack with each other.
-		++pc
 over		duplicates the value at 1-depth on the stack.
-		++pc
-		++st
 jmp <ADDR/LBL>	jumps to the specified address or label.
-		pc = <ADDR/LBL>
 je,jn,jl,jg,	jumps to the specified address or label IF the condition is satisfied.
 jle,jge		e = equal, n = not equal, l = less than, g = greater than. all others are 
 <ADDR/LBL>	combinations of these.
-		pc=<ADDR/LBL>  OR  pc+1
-		st-2
 ```
 
 ## Labels
