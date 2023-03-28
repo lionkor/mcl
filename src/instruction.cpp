@@ -1,9 +1,11 @@
 #include "instruction.h"
 
+#include <unordered_map>
+
 std::string_view to_string(Op op) {
     switch (op) {
-    case INVALID:
-        return "invalid";
+    case NOT_AN_INSTRUCTION:
+        return "not_an_instruction";
     case PUSH:
         return "push";
     case POP:
@@ -42,5 +44,73 @@ std::string_view to_string(Op op) {
         return "jle";
     case JMP:
         return "jmp";
+    }
+}
+
+Op op_from_string(const std::string& str) {
+    if (str == "push") {
+        return PUSH;
+    } else if (str == "pop") {
+        return POP;
+    } else if (str == "add") {
+        return ADD;
+    } else if (str == "sub") {
+        return SUB;
+    } else if (str == "mul") {
+        return MUL;
+    } else if (str == "div") {
+        return DIV;
+    } else if (str == "mod") {
+        return MOD;
+    } else if (str == "print") {
+        return PRINT;
+    } else if (str == "halt") {
+        return HALT;
+    } else if (str == "dup") {
+        return DUP;
+    } else if (str == "swap") {
+        return SWAP;
+    } else if (str == "over") {
+        return OVER;
+    } else if (str == "je") {
+        return JE;
+    } else if (str == "jn") {
+        return JN;
+    } else if (str == "jg") {
+        return JG;
+    } else if (str == "jl") {
+        return JL;
+    } else if (str == "jge") {
+        return JGE;
+    } else if (str == "jle") {
+        return JLE;
+    } else if (str == "jmp") {
+        return JMP;
+    } else {
+        return NOT_AN_INSTRUCTION;
+    }
+}
+
+bool op_requires_i64_argument(Op op) {
+    if (op < PUSH) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+bool op_requires_str_argument(Op op) {
+    if (op < PUSH && op > OVER) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool op_accepts_label_argument(Op op) {
+    if (op >= JE) {
+        return true;
+    } else {
+        return false;
     }
 }

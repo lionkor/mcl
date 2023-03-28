@@ -29,6 +29,11 @@ struct Token {
 
 using TokenStream = std::vector<Token>;
 using AbstractInstrStream = std::vector<AbstractInstr>;
+using InstrStream = std::vector<Instr>;
 
 Result<TokenStream> parse(const std::span<std::string>& lines, const std::string& filename);
 Result<AbstractInstrStream> translate(const TokenStream& tokens);
+
+// do optimization steps between translate() and finalize()
+
+Result<InstrStream> finalize(AbstractInstrStream&& abstracts);

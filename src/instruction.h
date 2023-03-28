@@ -1,11 +1,13 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <string_view>
 
 enum Op : uint8_t {
-    INVALID = 0x00,
-    PUSH,
+    NOT_AN_INSTRUCTION = 0x00, // is label or invalid instruction
+
+    // without argument
     POP,
     ADD,
     SUB,
@@ -18,6 +20,12 @@ enum Op : uint8_t {
     SWAP,
     OVER,
 
+    // with string argument
+    // NONE
+
+    // with argument
+    PUSH,
+
     // keep these at the end
     JE,
     JN,
@@ -29,12 +37,15 @@ enum Op : uint8_t {
 };
 
 std::string_view to_string(Op op);
-Op from_string(const std::string& str);
+Op op_from_string(const std::string& str);
+bool op_requires_i64_argument(Op op);
+bool op_requires_str_argument(Op op);
+bool op_accepts_label_argument(Op op);
 
 union Instr {
     struct {
         Op op : 8;
-        uint64_t val : 56;
+        int64_t val : 56;
     } s;
     uint64_t v;
 };

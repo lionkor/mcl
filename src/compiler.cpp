@@ -1,11 +1,16 @@
 #include "compiler.h"
+#include "abstract_instruction.h"
+#include "instruction.h"
+#include "source_location.h"
 #include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <climits>
 #include <ranges>
 #include <regex>
+#include <span>
 #include <string>
+#include <unordered_map>
 
 static inline std::string& ltrim_inplace(std::string& str) {
     auto it2 = std::find_if(str.begin(), str.end(), [](char ch) { return !std::isspace<char>(ch, std::locale::classic()); });
@@ -117,6 +122,161 @@ Result<TokenStream> parse(const std::span<std::string>& lines, const std::string
     return tokens;
 }
 
-Result<AbstractInstrStream> translate(const TokenStream& tokens) {
+static inline Token consume(std::span<const Token>& span) {
+    auto tok = std::move(span.front());
+    span = span.subspan(1);
+    return tok;
+}
 
+static inline bool can_consume(const std::span<const Token>& span) {
+    return !span.empty();
+}
+
+Result<AbstractInstrStream> translate(const TokenStream& tokens) {
+    AbstractInstrStream result;
+    std::span<const Token> span(tokens.begin(), tokens.end());
+    while (!span.empty()) {
+        auto verb = consume(span);
+        if (!verb.is_str) {
+            return { "{}: Expected instruction, instead got '{}'", to_string(verb.loc), verb.i64 };
+        }
+        if (verb.str.starts_with(':')) {
+            // is label, so create an abstract instruction which simply holds the label
+            // value. this is a bit of a hack, but makes the program flow very simple.
+            result.push_back(AbstractInstr {
+                .instr = {
+                    .s = {
+                        .op = NOT_AN_INSTRUCTION,
+                        .val = 0,
+                    },
+                },
+                .location = verb.loc,
+                .unresolved_symbol = std::nullopt,
+                .unresolved_label = verb.str.substr(1),
+            });
+        } else {
+            // assume it's an instruction
+            auto op = op_from_string(verb.str);
+            if (op == NOT_AN_INSTRUCTION) {
+                // invalid instr
+                return { "{}: Invalid instruction '{}'.", to_string(verb.loc), verb.str };
+            }
+            if (op_requires_i64_argument(op)) {
+                if (!can_consume(span)) {
+                    return { "{}: '{}' expects an i64 argument, but no argument was provided.", to_string(verb.loc), verb.str };
+                }
+                auto arg = consume(span);
+                if (!arg.is_i64) {
+                    if (!op_accepts_label_argument(op)) {
+                        // TODO: check if it's an instruction, give an error about "missing" argument instead
+                        return { "{}: '{}' expects an i64 argument, but given argument '{}' has the wrong type.", to_string(verb.loc), verb.str, arg.str };
+                    }
+                    if (arg.str.starts_with(':')) {
+                        // is label
+                        result.push_back(AbstractInstr {
+                            .instr = {
+                                .s = {
+                                    .op = op,
+                                    .val = 0,
+                                },
+                            },
+                            .location = {
+                                .file = verb.loc.file,
+                                .line = verb.loc.line,
+                                .col_start = verb.loc.col_start,
+                                .col_end = arg.loc.col_end,
+                            },
+                            .unresolved_symbol = std::nullopt,
+                            .unresolved_label = arg.str.substr(1),
+                        });
+                    } else {
+                        return { "{}: '{}' expects an i64 argument (or a label), but given argument '{}' has the wrong type.", to_string(verb.loc), verb.str, arg.str };
+                    }
+                } else {
+                    // TODO: If the instruction stretches over two lines, the columns are wrong here.
+                    result.push_back(AbstractInstr {
+                        .instr = {
+                            .s = {
+                                .op = op,
+                                .val = arg.i64,
+                            },
+                        },
+                        .location = {
+                            .file = verb.loc.file,
+                            .line = verb.loc.line,
+                            .col_start = verb.loc.col_start,
+                            .col_end = arg.loc.col_end,
+                        },
+                        .unresolved_symbol = std::nullopt,
+                        .unresolved_label = std::nullopt,
+                    });
+                }
+            } else {
+                result.push_back(AbstractInstr {
+                    .instr = {
+                        .s = {
+                            .op = op,
+                            .val = 0,
+                        },
+                    },
+                    .location = {
+                        .file = verb.loc.file,
+                        .line = verb.loc.line,
+                        .col_start = verb.loc.col_start,
+                        .col_end = verb.loc.col_end,
+                    },
+                    .unresolved_symbol = std::nullopt,
+                    .unresolved_label = std::nullopt,
+                });
+            }
+        }
+    }
+    return result;
+}
+
+static inline void populate_labels(const AbstractInstrStream& abstracts, std::unordered_map<std::string, size_t>& labels) {
+    size_t addr_counter = 0;
+    for (const auto& abstract : abstracts) {
+        if (abstract.instr.s.op == NOT_AN_INSTRUCTION) {
+            // set label address to next instruction's address
+            // "unresolved" is abused here, and is in fact helping resolve it later
+            labels[abstract.unresolved_label.value()] = addr_counter + 1;
+        } else {
+            ++addr_counter;
+        }
+    }
+}
+
+static inline Error resolve_labels(const std::unordered_map<std::string, size_t>& labels, AbstractInstrStream& abstracts) {
+    for (auto& abstract : abstracts) {
+        if (abstract.instr.s.op != NOT_AN_INSTRUCTION
+            && abstract.unresolved_label.has_value()) {
+            // has a label which needs to be resolved
+            auto u_label = abstract.unresolved_label.value();
+            if (!labels.contains(u_label)) {
+                return Error("{}: Could not find label '{}'.", to_string(abstract.location), u_label);
+            }
+            abstract.instr.s.val = int64_t(labels.at(u_label));
+        }
+    }
+    return {};
+}
+
+Result<InstrStream> finalize(AbstractInstrStream&& abstracts) {
+    std::unordered_map<std::string, size_t> labels;
+    populate_labels(abstracts, labels);
+    auto err = resolve_labels(labels, abstracts);
+    if (err) {
+        return { "Failed to resolve label(s): {}", err.error };
+    }
+
+    InstrStream instrs;
+    instrs.reserve(abstracts.size() - labels.size());
+
+    for (const auto& abstract : abstracts) {
+        if (abstract.instr.s.op != NOT_AN_INSTRUCTION) {
+            instrs.push_back(abstract.instr);
+        }
+    }
+    return instrs;
 }

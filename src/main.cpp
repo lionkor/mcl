@@ -1,4 +1,5 @@
 #include "compiler.h"
+#include "interpreter.h"
 #include <algorithm>
 #include <cerrno>
 #include <compare>
@@ -7,6 +8,7 @@
 #include <filesystem>
 #include <fmt/core.h>
 #include <fstream>
+#include <ios>
 #include <string>
 #include <string_view>
 #include <sys/stat.h>
@@ -205,8 +207,7 @@ int main(int argc, char** argv) {
                            "\t--help\t\t Displays help\n"
                            "\t--version\t Displays version\n"
                            "\t--compile\t Enables compiling bytecode and not running the code. First specified file becomes output file ending in .mclb\n"
-                           "\t--exec\t\t Expects files to be bytecode executables, and runs them\n"
-                           "\nFiles: Files are executed in the order they are specified.\n",
+                           "\t--exec\t\t Expects files to be bytecode executables, and runs them\n",
                     argv[0]);
                 return 0;
             } else if (arg == "--version") {
@@ -225,7 +226,7 @@ int main(int argc, char** argv) {
         }
     }
     if (files.empty()) {
-        fmt::print("No file(s) specified. See '{} --help' for help.\n", argv[0]);
+        fmt::print("Error: No file(s) specified. See '{} --help' for help.\n", argv[0]);
         return 1;
     }
 
@@ -234,29 +235,80 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    for (const auto& filename : files) {
-        if (filename.ends_with("mclb")) {
-            fmt::print("Error: Passed `.mclb` file '{}' to the compiler, but `.mclb` is the extension of files which have already been compiled. Not allowing this.\n", filename);
-            return 1;
-        }
-        std::ifstream file((std::string(filename)));
-        std::string line;
-        std::vector<std::string> lines;
-        while (std::getline(file, line)) {
-            lines.push_back(line);
-        }
-        auto res = parse(lines, filename.data());
-        if (res) {
-            auto tokens = res.move();
-            fmt::print("Parsed {} tokens.\n", tokens.size());
-            /* uncomment for debugging purposes
-            for (const auto& token : tokens) {
-                fmt::print("{}: {} / {}\n", to_string(token.loc), token.i64, token.str);
+    bool interpret = !compile_only && !exec_only;
+
+    if (compile_only || interpret) {
+        for (const auto& filename : files) {
+            if (filename.ends_with("mclb")) {
+                fmt::print("Error: Passed `.mclb` file '{}' to the compiler, but `.mclb` is the extension of files which have already been compiled. Not allowing this.\n", filename);
+                return 1;
             }
-            */
-        } else {
-            fmt::print("Error while parsing: {}\n", res.error);
-            return 1;
+            std::ifstream file((std::string(filename)));
+            std::string line;
+            std::vector<std::string> lines;
+            while (std::getline(file, line)) {
+                lines.push_back(line);
+            }
+            auto parse_res = parse(lines, filename.data());
+            TokenStream tokens;
+            if (parse_res) {
+                tokens = parse_res.move();
+                fmt::print("Parsed {} tokens.\n", tokens.size());
+            } else {
+                fmt::print("Error while parsing: {}\n", parse_res.error);
+                return 1;
+            }
+            auto translate_res = translate(tokens);
+            AbstractInstrStream abstract_instrs;
+            if (translate_res) {
+                abstract_instrs = translate_res.move();
+                fmt::print("Translated into {} abstract instructions.\n", abstract_instrs.size());
+            } else {
+                fmt::print("Error while translating: {}\n", translate_res.error);
+                return 1;
+            }
+            auto finalize_res = finalize(std::move(abstract_instrs));
+            InstrStream instrs;
+            if (finalize_res) {
+                instrs = finalize_res.move();
+                fmt::print("Finalized into {} instructions.\n", instrs.size());
+            } else {
+                fmt::print("Error while finalizing: {}\n", finalize_res.error);
+                return 1;
+            }
+            // now write to file
+            std::ofstream outfile(std::filesystem::path(filename).replace_filename("mclb").string(), std::ios::trunc | std::ios::binary);
+            outfile.write(reinterpret_cast<const char*>(instrs.data()), std::streamsize(instrs.size() * sizeof(Instr)));
+        }
+    }
+    if (interpret) {
+        for (const auto& filename_mcl : files) {
+            auto filename = std::filesystem::path(filename_mcl).replace_filename("mclb").string();
+            std::ifstream file(filename, std::ios::binary);
+            InstrStream instrs;
+            instrs.resize(std::filesystem::file_size(filename));
+            file.read(reinterpret_cast<char*>(instrs.data()), std::streamsize(instrs.size() * sizeof(Instr)));
+            auto err = execute(std::move(instrs));
+            if (err) {
+                fmt::print("Error executing '{}': {}\n", filename, err.error);
+                return 1;
+            }
+        }
+    } else if (exec_only) {
+        for (const auto& filename : files) {
+            if (filename.ends_with(".mcl")) {
+                fmt::print("Error: '{}' ends in '.mcl', which indicates it's a source file. For `--exec` mode, you must only pass compiled binary objects.", filename);
+                return 1;
+            }
+            std::ifstream file(filename.data(), std::ios::binary);
+            InstrStream instrs;
+            instrs.resize(std::filesystem::file_size(filename.data()));
+            file.read(reinterpret_cast<char*>(instrs.data()), std::streamsize(instrs.size() * sizeof(Instr)));
+            auto err = execute(std::move(instrs));
+            if (err) {
+                fmt::print("Error executing '{}': {}\n", filename, err.error);
+                return 1;
+            }
         }
     }
     return 0;

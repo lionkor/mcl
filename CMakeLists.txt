@@ -24,11 +24,13 @@ set(PRJ_HEADERS
     src/source_location.h
     src/abstract_instruction.h
     src/error.h
+    src/interpreter.h
     )
 # add all source files (.cpp) to this, except the one with main()
 set(PRJ_SOURCES 
     src/instruction.cpp
     src/compiler.cpp
+    src/interpreter.cpp
     )
 # set the source file containing main()
 set(PRJ_MAIN src/main.cpp)
