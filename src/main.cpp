@@ -11,189 +11,8 @@
 #include <ios>
 #include <string>
 #include <string_view>
-#include <sys/stat.h>
 #include <unordered_map>
 #include <vector>
-
-/*
-static bool run_bytecode(std::vector<Instr>&& bytecode) {
-    size_t pc = 0;
-    size_t st = 0;
-    std::vector<int64_t> stack;
-    stack.resize(4096);
-    // terminate the end to avoid out-of-range pc
-    bytecode.push_back(Instr{.s={.op=HALT, .val =0}});
-
-    bool running = true;
-    while (running) {
-        const auto& op = bytecode[pc].s.op;
-#ifdef _DEBUG
-        const auto& arg_val = bytecode[pc].s.val;
-        fmt::print("---\nPC: {:4}, OP: {:5}, VAL: {:4}\n", pc, to_string(op), arg_val);
-        auto old_pc = pc;
-#endif
-        switch (op) {
-        case INVALID:
-            fmt::print("INVALID encountered, exiting\n");
-            return false;
-        case PUSH:
-            set(stack, st, 0, bytecode[pc].s.val);
-            move_stack_top(st, 1);
-            break;
-        case POP:
-            move_stack_top(st, -1);
-            break;
-        case ADD: {
-            int64_t a = get(stack, st, -2);
-            int64_t b = get(stack, st, -1);
-            move_stack_top(st, -1);
-            set(stack, st, -1, a + b);
-            break;
-        }
-        case SUB: {
-            int64_t a = get(stack, st, -2);
-            int64_t b = get(stack, st, -1);
-            move_stack_top(st, -1);
-            set(stack, st, -1, a - b);
-            break;
-        }
-        case MUL: {
-            int64_t a = get(stack, st, -2);
-            int64_t b = get(stack, st, -1);
-            move_stack_top(st, -1);
-            set(stack, st, -1, a * b);
-            break;
-        }
-        case DIV: {
-            int64_t a = get(stack, st, -2);
-            int64_t b = get(stack, st, -1);
-            if (b == 0) [[unlikely]] {
-                fmt::print("exception: DIV by 0 at pc={}\n", pc);
-                return false;
-            }
-            move_stack_top(st, -1);
-            set(stack, st, -1, a / b);
-            break;
-        }
-        case MOD: {
-            int64_t a = get(stack, st, -2);
-            int64_t b = get(stack, st, -1);
-            if (b == 0) [[unlikely]] {
-                fmt::print("exception: MOD by 0 at pc={}\n", pc);
-                return false;
-            }
-            move_stack_top(st, -1);
-            set(stack, st, -1, a % b);
-            break;
-        }
-        case PRINT:
-            fmt::print("{}\n", get(stack, st, -1));
-            break;
-        case HALT:
-            running = false;
-            break;
-        case DUP: {
-            auto value = get(stack, st, -1);
-            set(stack, st, 0, value);
-            move_stack_top(st, 1);
-            break;
-        }
-        case SWAP:
-#ifdef _DEBUG
-            if (2 > st) {
-                fmt::print("STACK CHECK FAILED: swap called with <2 elements on the stack.\n");
-                std::abort();
-            }
-#endif
-            std::swap(stack[st - 2], stack[st - 1]);
-            break;
-        case OVER: {
-            auto value = get(stack, st, -2);
-            move_stack_top(st, +1);
-            set(stack, st, -1, value);
-            break;
-        }
-        case JE: {
-            int64_t a = stack[st - 2];
-            int64_t b = stack[st - 1];
-            st -= 2;
-            if (a == b) {
-                pc = bytecode[pc].s.val;
-            } else {
-                ++pc;
-            }
-            break;
-        }
-        case JN: {
-            int64_t a = stack[st - 2];
-            int64_t b = stack[st - 1];
-            st -= 2;
-            if (a != b) {
-                pc = bytecode[pc].s.val;
-            } else {
-                ++pc;
-            }
-            break;
-        }
-        case JG: {
-            int64_t a = stack[st - 2];
-            int64_t b = stack[st - 1];
-            st -= 2;
-            if (a > b) {
-                pc = bytecode[pc].s.val;
-            } else {
-                ++pc;
-            }
-            break;
-        }
-        case JL: {
-            int64_t a = stack[st - 2];
-            int64_t b = stack[st - 1];
-            st -= 2;
-            if (a < b) {
-                pc = bytecode[pc].s.val;
-            } else {
-                ++pc;
-            }
-            break;
-        }
-        case JGE: {
-            int64_t a = stack[st - 2];
-            int64_t b = stack[st - 1];
-            st -= 2;
-            if (a >= b) {
-                pc = bytecode[pc].s.val;
-            } else {
-                ++pc;
-            }
-            break;
-        }
-        case JLE: {
-            int64_t a = stack[st - 2];
-            int64_t b = stack[st - 1];
-            st -= 2;
-            if (a <= b) {
-                pc = bytecode[pc].s.val;
-            } else {
-                ++pc;
-            }
-            break;
-        }
-        case JMP: {
-            pc = bytecode[pc].s.val;
-            break;
-        }
-        }
-        DEBUG_PRINT(old_pc, stack, st, op, arg_val);
-        // increment pc if not a JUMP instr
-        // unlikely since most instrs are not jumps
-        if (op < JE) [[unlikely]] {
-            ++pc;
-        }
-    }
-    return true;
-}
-*/
 
 int main(int argc, char** argv) {
     std::vector<std::string_view> files;
@@ -277,13 +96,13 @@ int main(int argc, char** argv) {
                 return 1;
             }
             // now write to file
-            std::ofstream outfile(std::filesystem::path(filename).replace_filename("mclb").string(), std::ios::trunc | std::ios::binary);
+            std::ofstream outfile(std::filesystem::path(filename).replace_extension("mclb").string(), std::ios::trunc | std::ios::binary);
             outfile.write(reinterpret_cast<const char*>(instrs.data()), std::streamsize(instrs.size() * sizeof(Instr)));
         }
     }
     if (interpret) {
         for (const auto& filename_mcl : files) {
-            auto filename = std::filesystem::path(filename_mcl).replace_filename("mclb").string();
+            auto filename = std::filesystem::path(filename_mcl).replace_extension("mclb").string();
             std::ifstream file(filename, std::ios::binary);
             InstrStream instrs;
             instrs.resize(std::filesystem::file_size(filename));

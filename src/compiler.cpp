@@ -240,7 +240,7 @@ static inline void populate_labels(const AbstractInstrStream& abstracts, std::un
         if (abstract.instr.s.op == NOT_AN_INSTRUCTION) {
             // set label address to next instruction's address
             // "unresolved" is abused here, and is in fact helping resolve it later
-            labels[abstract.unresolved_label.value()] = addr_counter + 1;
+            labels[abstract.unresolved_label.value()] = addr_counter;
         } else {
             ++addr_counter;
         }

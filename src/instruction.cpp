@@ -45,6 +45,7 @@ std::string_view to_string(Op op) {
     case JMP:
         return "jmp";
     }
+    return "not_an_instruction";
 }
 
 Op op_from_string(const std::string& str) {

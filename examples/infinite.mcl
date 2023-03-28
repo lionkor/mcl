@@ -1,6 +1,8 @@
 push 1
-push 2
+:loop
+push 1
 add
+dup
 print
-jmp 1
+jmp :loop
 

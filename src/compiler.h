@@ -12,19 +12,19 @@ struct Token {
     bool is_i64;
     SourceLocation loc;
 
-    Token(int64_t i, SourceLocation loc)
+    Token(int64_t i, SourceLocation loc_)
         : i64(i)
         , str()
         , is_str(false)
         , is_i64(true)
-        , loc(std::move(loc)) { }
+        , loc(std::move(loc_)) { }
 
-    Token(std::string s, SourceLocation loc)
+    Token(std::string s, SourceLocation loc_)
         : i64()
         , str(std::move(s))
         , is_str(true)
         , is_i64(false)
-        , loc(std::move(loc)) { }
+        , loc(std::move(loc_)) { }
 };
 
 using TokenStream = std::vector<Token>;

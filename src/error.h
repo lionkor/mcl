@@ -85,7 +85,7 @@ struct Result {
     T&& move() { return std::move(result.value()); }
     const T& value() const { return result.value(); }
 
-    std::optional<T> result;
-    bool is_error;
-    std::string error;
+    std::optional<T> result { std::nullopt };
+    bool is_error { false };
+    std::string error { "Success" };
 };
