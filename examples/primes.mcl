@@ -1,6 +1,6 @@
 :start
-#push 100002493
-push 10001231
+push 100002493
+#push 10001231
 push 1
 
 :loop
