@@ -2,12 +2,12 @@
 #include "instruction.h"
 
 static inline void push(Stack& stack, int64_t value) {
-#ifdef _DEBUG
-    if (stack.stack_top + 1 >= stack.stack.size()) {
+    // This is the only stack check we leave in release builds,
+    // because this is easily reached with *valid* code.
+    if (stack.stack_top + 1 >= stack.stack.size()) [[unlikely]] {
         fmt::print("FATAL: Stack check failed, tried to push onto full stack.\n");
         std::abort();
     }
-#endif
     stack.stack[stack.stack_top] = value;
     ++stack.stack_top;
 }
@@ -64,8 +64,7 @@ Error execute(InstrStream&& instrs) noexcept {
         .pc = 0,
     };
 
-    bool running = true;
-    while (running) [[likely]] {
+    while (true) {
 #ifdef _DEBUG
         std::string ins = "";
         if (op_requires_i64_argument(prog.instrs[prog.pc].s.op)) {
@@ -126,8 +125,7 @@ Error execute(InstrStream&& instrs) noexcept {
             fmt::print("{}\n", pop(stack));
             break;
         case HALT:
-            running = false;
-            break;
+            return {};
         case DUP:
             push(stack, at_offset(stack, -1));
             break;
@@ -198,5 +196,6 @@ Error execute(InstrStream&& instrs) noexcept {
             prog.pc = next_pc;
         }
     }
+    // not really reachable
     return {};
 }

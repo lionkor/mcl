@@ -4,7 +4,8 @@
 #include "error.h"
 
 struct Stack {
-    std::array<int64_t, 4096> stack {};
+    static constexpr size_t STACK_SIZE = 4096;
+    std::array<int64_t, STACK_SIZE> stack {};
     size_t stack_top { 0 };
 };
 

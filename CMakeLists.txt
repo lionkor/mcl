@@ -47,13 +47,11 @@ set(PRJ_LIBRARIES
     fmt::fmt
     doctest::doctest
     Threads::Threads
-    spdlog::spdlog
 )
 
 # add dependency find_package calls and similar here
 find_package(fmt CONFIG REQUIRED)
 find_package(doctest CONFIG REQUIRED)
-find_package(spdlog CONFIG REQUIRED)
 
 # to enable multithreading and the Threads::Threads dependency
 include(FindThreads)
@@ -92,7 +90,6 @@ set(PRJ_DEFINITIONS ${PRJ_DEFINITIONS}
     PRJ_GIT_HASH="${PRJ_GIT_HASH}"
 )
 
-
 add_executable(${PROJECT_NAME} ${PRJ_HEADERS} ${PRJ_SOURCES} ${PRJ_MAIN})
 target_link_libraries(${PROJECT_NAME} ${PRJ_LIBRARIES})
 target_compile_features(${PROJECT_NAME} PRIVATE ${PRJ_COMPILE_FEATURES})
@@ -102,6 +99,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE ${PRJ_DEFINITIONS} ${PRJ_WARN
 
 # setup all warnings (from cmake/CompilerWarnings.cmake)
 set_project_warnings(${PROJECT_NAME})
+
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -O3")
 
 if(${PROJECT_NAME}_ENABLE_UNIT_TESTING)
     message(STATUS "Unit tests are enabled and will be built as '${PROJECT_NAME}-tests'")

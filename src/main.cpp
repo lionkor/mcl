@@ -14,10 +14,14 @@
 #include <unordered_map>
 #include <vector>
 
-int main(int argc, char** argv) {
-    std::vector<std::string_view> files;
+struct Config {
     bool compile_only = false;
     bool exec_only = false;
+    std::vector<std::string_view> files {};
+};
+
+static Result<Config> parse_config_from_argv(int argc, char** argv) {
+    Config cfg;
     for (int i = 1; i < argc; ++i) {
         std::string_view arg(argv[i]);
         if (arg.starts_with("--")) {
@@ -28,36 +32,47 @@ int main(int argc, char** argv) {
                            "\t--compile\t Enables compiling bytecode and not running the code. First specified file becomes output file ending in .mclb\n"
                            "\t--exec\t\t Expects files to be bytecode executables, and runs them\n",
                     argv[0]);
-                return 0;
+                std::exit(0);
             } else if (arg == "--version") {
                 fmt::print("v{}.{}.{}-{}\n", PRJ_VERSION_MAJOR, PRJ_VERSION_MINOR, PRJ_VERSION_PATCH, PRJ_GIT_HASH);
-                return 0;
+                std::exit(0);
             } else if (arg == "--compile") {
-                compile_only = true;
+                cfg.compile_only = true;
             } else if (arg == "--exec") {
-                exec_only = true;
+                cfg.exec_only = true;
             } else {
-                fmt::print("Unknown argument '{}', run '{} --help' for help.\n", arg, argv[0]);
-                return 1;
+                return { "Unknown argument '{}', run '{} --help' for help.", arg, argv[0] };
             }
         } else {
-            files.push_back(arg);
+            cfg.files.push_back(arg);
         }
     }
-    if (files.empty()) {
+    return cfg;
+}
+
+int main(int argc, char** argv) {
+    Config cfg;
+    auto cfg_res = parse_config_from_argv(argc, argv);
+    if (cfg_res) {
+        cfg = cfg_res.move();
+    } else {
+        fmt::print("Error: {}\n", cfg_res.error);
+        return 1;
+    }
+    if (cfg.files.empty()) {
         fmt::print("Error: No file(s) specified. See '{} --help' for help.\n", argv[0]);
         return 1;
     }
 
-    if (exec_only && compile_only) {
+    if (cfg.exec_only && cfg.compile_only) {
         fmt::print("Error: `exec` and `compile` not allowed at the same time. Run without arguments either of these arguments to compile and interpret source code in one go.\n");
         return 1;
     }
 
-    bool interpret = !compile_only && !exec_only;
+    bool interpret = !cfg.compile_only && !cfg.exec_only;
 
-    if (compile_only || interpret) {
-        for (const auto& filename : files) {
+    if (cfg.compile_only || interpret) {
+        for (const auto& filename : cfg.files) {
             if (filename.ends_with("mclb")) {
                 fmt::print("Error: Passed `.mclb` file '{}' to the compiler, but `.mclb` is the extension of files which have already been compiled. Not allowing this.\n", filename);
                 return 1;
@@ -101,7 +116,7 @@ int main(int argc, char** argv) {
         }
     }
     if (interpret) {
-        for (const auto& filename_mcl : files) {
+        for (const auto& filename_mcl : cfg.files) {
             auto filename = std::filesystem::path(filename_mcl).replace_extension("mclb").string();
             std::ifstream file(filename, std::ios::binary);
             InstrStream instrs;
@@ -113,8 +128,8 @@ int main(int argc, char** argv) {
                 return 1;
             }
         }
-    } else if (exec_only) {
-        for (const auto& filename : files) {
+    } else if (cfg.exec_only) {
+        for (const auto& filename : cfg.files) {
             if (filename.ends_with(".mcl")) {
                 fmt::print("Error: '{}' ends in '.mcl', which indicates it's a source file. For `--exec` mode, you must only pass compiled binary objects.", filename);
                 return 1;
