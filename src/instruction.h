@@ -10,6 +10,8 @@ enum Op : uint8_t {
     // without argument
     POP,
     ADD,
+    INC,
+    DEC,
     SUB,
     MUL,
     DIV,
@@ -17,6 +19,7 @@ enum Op : uint8_t {
     PRINT,
     HALT,
     DUP,
+    DUP2,
     SWAP,
     OVER,
 
@@ -44,7 +47,7 @@ bool op_accepts_label_argument(Op op);
 
 union Instr {
     struct {
-        Op op : 8;
+        Op op;
         int64_t val : 56;
     } s;
     uint64_t v;

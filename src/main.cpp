@@ -101,6 +101,15 @@ int main(int argc, char** argv) {
                 fmt::print("Error while translating: {}\n", translate_res.error);
                 return 1;
             }
+
+            auto err = optimize_substitute(abstract_instrs);
+            if (err) {
+                fmt::print("Error while applying substitution optimizations: {}\n", err.error);
+                return 1;
+            } else {
+                fmt::print("Applied substitution optimizations resulting in {} abstract instructions.\n", abstract_instrs.size());
+            }
+
             auto finalize_res = finalize(std::move(abstract_instrs));
             InstrStream instrs;
             if (finalize_res) {

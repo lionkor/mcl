@@ -63,7 +63,7 @@ Result<TokenStream> parse(const std::span<std::string>& lines, const std::string
 
         const std::regex re_str(R"(:?[a-zA-Z_][a-zA-Z_0-9]*)");
         const std::regex re_int(R"([-+]?[0-9]+)");
-        const std::regex re_hex(R"([-+]?0x[0-9]+)");
+        const std::regex re_hex(R"([-+]?0x[0-9a-f]+)");
         const std::regex re_comment(R"(#.*)");
 
         line = std::regex_replace(line, re_comment, "");
@@ -279,4 +279,57 @@ Result<InstrStream> finalize(AbstractInstrStream&& abstracts) {
         }
     }
     return instrs;
+}
+
+/// Replace `push 1; add` with `inc`
+static Error optimize_substitute_inc(AbstractInstrStream& abstracts) {
+    std::vector<size_t> to_remove {};
+    for (size_t i = 0; i < abstracts.size() - 1; ++i) {
+        Op& op = abstracts[i].instr.s.op;
+        Op& next_op = abstracts[i + 1].instr.s.op;
+
+        int64_t val = abstracts[i].instr.s.val;
+        if (op == PUSH && val == 1
+            && next_op == ADD) {
+            to_remove.push_back(i + 1);
+            op = INC;
+            val = 0;
+        }
+        abstracts[i].instr.s.val = val;
+    }
+    std::reverse(to_remove.begin(), to_remove.end());
+    for (size_t i : to_remove) {
+        abstracts.erase(abstracts.begin() + i);
+    }
+    return {};
+}
+
+/// Replace `over; over` with `dup2`
+static Error optimize_substitute_dup2(AbstractInstrStream& abstracts) {
+    std::vector<size_t> to_remove {};
+    for (size_t i = 0; i < abstracts.size() - 1; ++i) {
+        Op& op = abstracts[i].instr.s.op;
+        Op& next_op = abstracts[i + 1].instr.s.op;
+        if (op == OVER && next_op == OVER) {
+            to_remove.push_back(i + 1);
+            op = DUP2;
+        }
+    }
+    std::reverse(to_remove.begin(), to_remove.end());
+    for (size_t i : to_remove) {
+        abstracts.erase(abstracts.begin() + i);
+    }
+    return {};
+}
+
+Error optimize_substitute(AbstractInstrStream& abstracts) {
+    auto err = optimize_substitute_inc(abstracts);
+    if (err) {
+        return err;
+    }
+    err = optimize_substitute_dup2(abstracts);
+    if (err) {
+        return err;
+    }
+    return {};
 }

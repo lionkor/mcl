@@ -57,6 +57,37 @@ static inline void swap(Stack& stack, int64_t o1, int64_t o2) {
         stack.stack[size_t(int64_t(stack.stack_top) + o2)]);
 }
 
+static inline void inc(Stack& stack) {
+#ifdef _DEBUG
+    if (stack.stack_top < 1) {
+        fmt::print("FATAL: Stack check failed, tried to increment top value, but the stack is empty.\n");
+        std::abort();
+    }
+#endif
+    ++stack.stack[stack.stack_top - 1];
+}
+
+static inline void dec(Stack& stack) {
+#ifdef _DEBUG
+    if (stack.stack_top < 1) {
+        fmt::print("FATAL: Stack check failed, tried to increment top value, but the stack is empty.\n");
+        std::abort();
+    }
+#endif
+    --stack.stack[stack.stack_top - 1];
+}
+
+static inline void dup2(Stack& stack) {
+#ifdef _DEBUG
+    if (stack.stack_top < 2) {
+        fmt::print("FATAL: Stack check failed, tried to dup top 2 values, but the stack has <2 elements.\n");
+        std::abort();
+    }
+#endif
+    std::copy(stack.stack.data() + stack.stack_top - 2, stack.stack.data() + stack.stack_top, stack.stack.data() + stack.stack_top);
+    stack.stack_top += 2;
+}
+
 Error execute(InstrStream&& instrs) noexcept {
     Stack stack;
     Program prog {
@@ -80,7 +111,7 @@ Error execute(InstrStream&& instrs) noexcept {
 #endif
         size_t next_pc = size_t(-1);
         switch (prog.instrs[prog.pc].s.op) {
-        [[unlikely]] case NOT_AN_INSTRUCTION:
+        case NOT_AN_INSTRUCTION:
             return Error("Invalid instruction. pc={}, stack_top={}", prog.pc, stack.stack_top);
         case POP:
             pop_ignore(stack);
@@ -89,6 +120,14 @@ Error execute(InstrStream&& instrs) noexcept {
             const auto b = pop(stack);
             const auto a = pop(stack);
             push(stack, a + b);
+            break;
+        }
+        case INC: {
+            inc(stack);
+            break;
+        }
+        case DEC: {
+            dec(stack);
             break;
         }
         case SUB: {
@@ -128,6 +167,9 @@ Error execute(InstrStream&& instrs) noexcept {
             return {};
         case DUP:
             push(stack, at_offset(stack, -1));
+            break;
+        case DUP2:
+            dup2(stack);
             break;
         case SWAP:
             swap(stack, -1, -2);

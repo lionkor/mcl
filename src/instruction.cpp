@@ -12,6 +12,10 @@ std::string_view to_string(Op op) {
         return "pop";
     case ADD:
         return "add";
+    case INC:
+        return "inc";
+    case DEC:
+        return "dec";
     case SUB:
         return "sub";
     case MUL:
@@ -26,6 +30,8 @@ std::string_view to_string(Op op) {
         return "halt";
     case DUP:
         return "dup";
+    case DUP2:
+        return "dup2";
     case SWAP:
         return "swap";
     case OVER:
@@ -55,6 +61,10 @@ Op op_from_string(const std::string& str) {
         return POP;
     } else if (str == "add") {
         return ADD;
+    } else if (str == "inc") {
+        return INC;
+    } else if (str == "dec") {
+        return DEC;
     } else if (str == "sub") {
         return SUB;
     } else if (str == "mul") {
@@ -69,6 +79,8 @@ Op op_from_string(const std::string& str) {
         return HALT;
     } else if (str == "dup") {
         return DUP;
+    } else if (str == "dup2") {
+        return DUP2;
     } else if (str == "swap") {
         return SWAP;
     } else if (str == "over") {

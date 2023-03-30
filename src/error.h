@@ -57,10 +57,10 @@ struct Error {
 
     /// Whether this error represents an error (true) or success (false).
     /// Use operator bool() instead of reading this if possible.
-    const bool is_error { false };
+    bool is_error { false };
     /// The error message. Is a valid string even if is_error is false, but will
     /// be "Success".
-    const std::string error { "Success" };
+    std::string error { "Success" };
 
     /// Implicit conversion to boolean.
     /// True if this Error contains an error, false if not.
