@@ -410,3 +410,80 @@ Error optimize_substitute(AbstractInstrStream& abstracts) {
     }
     return {};
 }
+
+/// Folds `add` of constants to the addition result
+/// Returns true if there was a change made, false if not. This allows
+/// executing it in a loop until no further changes can be made.
+static Result<bool> optimize_fold_arith(AbstractInstrStream& abstracts) {
+    std::vector<size_t> to_remove {};
+    bool changed = false;
+    for (size_t i = 0; i < abstracts.size() - 2; ++i) {
+        auto& instr0 = abstracts[i].instr.s;
+        auto& instr1 = abstracts[i + 1].instr.s;
+        auto& instr2 = abstracts[i + 2].instr.s;
+
+        if (instr0.op == PUSH && instr1.op == PUSH
+            && (instr2.op == ADD
+                || instr2.op == SUB
+                || instr2.op == MUL
+                || instr2.op == DIV
+                || instr2.op == MOD)) {
+            to_remove.push_back(i + 1);
+            to_remove.push_back(i + 2);
+            switch (uint8_t(instr2.op)) {
+            case ADD:
+                instr0.val += instr1.val;
+                break;
+            case SUB:
+                instr0.val -= instr1.val;
+                break;
+            case MUL:
+                instr0.val *= instr1.val;
+                break;
+            case DIV:
+                instr0.val /= instr1.val;
+                break;
+            case MOD:
+                instr0.val %= instr1.val;
+                break;
+            default:
+                assert(!bool("unreachable code"));
+                break;
+            }
+            changed = true;
+        } else if (instr0.op == PUSH && instr1.op == INC) {
+            to_remove.push_back(i + 1);
+            ++instr0.val;
+            changed = true;
+        } else if (instr0.op == PUSH && instr1.op == DEC) {
+            to_remove.push_back(i + 1);
+            --instr0.val;
+            changed = true;
+        }
+    }
+    std::reverse(to_remove.begin(), to_remove.end());
+    for (size_t i : to_remove) {
+        abstracts.erase(abstracts.begin() + long(i));
+    }
+    return changed;
+}
+
+Error optimize_fold(AbstractInstrStream& abstracts) {
+    if (abstracts.size() < 3) {
+        return {};
+    }
+    while (true) {
+        bool changed = false;
+        auto res = optimize_fold_arith(abstracts);
+        if (!res) {
+            return { "Failed: {}", res.error };
+        } else if (res.value()) {
+            changed = true;
+        }
+
+        if (!changed) {
+            break;
+        }
+    }
+    return {};
+}

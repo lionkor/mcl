@@ -37,5 +37,6 @@ Result<AbstractInstrStream> translate(const TokenStream& tokens);
 // do optimization steps between translate() and finalize()
 
 Error optimize_substitute(AbstractInstrStream& abstracts);
+Error optimize_fold(AbstractInstrStream& abstracts);
 
 Result<InstrStream> finalize(AbstractInstrStream&& abstracts);

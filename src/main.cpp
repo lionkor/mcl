@@ -176,6 +176,13 @@ int main(int argc, char** argv) {
                 } else {
                     fmt::print("Applied substitution optimizations resulting in {} abstract instructions.\n", abstract_instrs.size());
                 }
+                err = optimize_fold(abstract_instrs);
+                if (err) {
+                    fmt::print("Error while applying fold optimizations: {}\n", err.error);
+                    return 1;
+                } else {
+                    fmt::print("Applied fold optimizations resulting in {} abstract instructions.\n", abstract_instrs.size());
+                }
             }
 
             auto finalize_res = finalize(std::move(abstract_instrs));
