@@ -388,6 +388,9 @@ static Error optimize_substitute_dup2(AbstractInstrStream& abstracts) {
 }
 
 Error optimize_substitute(AbstractInstrStream& abstracts) {
+    if (abstracts.size() < 2) {
+        return {};
+    }
     auto err = optimize_substitute_inc(abstracts);
     if (err) {
         return err;
