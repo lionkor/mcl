@@ -11,7 +11,7 @@ You can find the **full language reference** here: [Reference.md](./Reference.md
 Find more examples in the [examples](./examples) directory.
 
 Adding 123 and 456:
-```nasm
+```gas
 push 123
 push 456
 add
@@ -21,7 +21,7 @@ halt
 -> `579`
 
 Adding 5 and 6, then multiplying by 1 (operator precedence):
-```nasm
+```gas
 push 1
 push 5
 push 6
@@ -33,7 +33,7 @@ halt
 -> `11`
 
 Multiplying 42 by itself by use of `dup`:
-```nasm
+```gas
 push 42
 dup
 mul
@@ -72,7 +72,7 @@ print("1")
 Takes about 7.76 seconds on the above machine.
 
 The same algorithm in MCL:
-```nasm
+```gas
 :start
 # prime `p` to check
 push 100002493
