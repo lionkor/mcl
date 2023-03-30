@@ -4,7 +4,7 @@ include(cmake/Vcpkg.cmake) # needs to happen before project()
 
 project(
     "mcl"
-    VERSION 1.0.1
+    VERSION 1.1.0
     LANGUAGES CXX
 )
 
