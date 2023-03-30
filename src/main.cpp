@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
                 filename);
             std::ifstream file(filename.data(), std::ios::binary);
             InstrStream instrs;
-            instrs.resize(std::filesystem::file_size(filename.data()));
+            instrs.resize(std::filesystem::file_size(filename.data()) / sizeof(Instr));
             file.read(reinterpret_cast<char*>(instrs.data()), std::streamsize(instrs.size() * sizeof(Instr)));
             std::unordered_map<size_t, std::string> labels;
             size_t i = 0;
@@ -204,7 +204,7 @@ int main(int argc, char** argv) {
             auto filename = std::filesystem::path(filename_mcl).replace_extension("mclb").string();
             std::ifstream file(filename, std::ios::binary);
             InstrStream instrs;
-            instrs.resize(std::filesystem::file_size(filename));
+            instrs.resize(std::filesystem::file_size(filename) / sizeof(Instr));
             file.read(reinterpret_cast<char*>(instrs.data()), std::streamsize(instrs.size() * sizeof(Instr)));
             auto err = execute(std::move(instrs));
             if (err) {
@@ -220,7 +220,7 @@ int main(int argc, char** argv) {
             }
             std::ifstream file(filename.data(), std::ios::binary);
             InstrStream instrs;
-            instrs.resize(std::filesystem::file_size(filename.data()));
+            instrs.resize(std::filesystem::file_size(filename.data()) / sizeof(Instr));
             file.read(reinterpret_cast<char*>(instrs.data()), std::streamsize(instrs.size() * sizeof(Instr)));
             auto err = execute(std::move(instrs));
             if (err) {
