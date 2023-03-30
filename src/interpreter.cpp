@@ -174,6 +174,9 @@ Error execute(InstrStream&& instrs) noexcept {
         case SWAP:
             swap(stack, -1, -2);
             break;
+        case CLEAR:
+            stack.stack_top = 0;
+            break;
         case OVER:
             push(stack, at_offset(stack, -2));
             break;
@@ -231,6 +234,20 @@ Error execute(InstrStream&& instrs) noexcept {
         case JMP:
             next_pc = size_t(prog.instrs[prog.pc].s.val);
             break;
+        case JZ: {
+            const auto a = pop(stack);
+            if (a == 0) {
+                next_pc = size_t(prog.instrs[prog.pc].s.val);
+            }
+            break;
+        }
+        case JNZ: {
+            const auto a = pop(stack);
+            if (a != 0) {
+                next_pc = size_t(prog.instrs[prog.pc].s.val);
+            }
+            break;
+        }
         }
         if (next_pc == size_t(-1)) [[likely]] {
             ++prog.pc;

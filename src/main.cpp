@@ -1,9 +1,11 @@
 #include "compiler.h"
+#include "instruction.h"
 #include "interpreter.h"
 #include <algorithm>
 #include <cerrno>
 #include <compare>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fmt/core.h>
@@ -17,6 +19,8 @@
 struct Config {
     bool compile_only = false;
     bool exec_only = false;
+    bool optimize = true;
+    bool decompile = false;
     std::vector<std::string_view> files {};
 };
 
@@ -29,6 +33,8 @@ static Result<Config> parse_config_from_argv(int argc, char** argv) {
                 fmt::print("Usage:\n\t{} [OPTION...] <FILE...>\n\nOptions:\n"
                            "\t--help\t\t Displays help\n"
                            "\t--version\t Displays version\n"
+                           "\t--decompile\t Decompiles one or more given executable .mclb file(s)\n"
+                           "\t--dont-optimize\t Disables optimizations (optimizations are enabled by default)\n"
                            "\t--compile\t Enables compiling bytecode and not running the code. First specified file becomes output file ending in .mclb\n"
                            "\t--exec\t\t Expects files to be bytecode executables, and runs them\n",
                     argv[0]);
@@ -36,6 +42,10 @@ static Result<Config> parse_config_from_argv(int argc, char** argv) {
             } else if (arg == "--version") {
                 fmt::print("v{}.{}.{}-{}\n", PRJ_VERSION_MAJOR, PRJ_VERSION_MINOR, PRJ_VERSION_PATCH, PRJ_GIT_HASH);
                 std::exit(0);
+            } else if (arg == "--dont-optimize") {
+                cfg.optimize = false;
+            } else if (arg == "--decompile") {
+                cfg.decompile = true;
             } else if (arg == "--compile") {
                 cfg.compile_only = true;
             } else if (arg == "--exec") {
@@ -67,6 +77,62 @@ int main(int argc, char** argv) {
     if (cfg.exec_only && cfg.compile_only) {
         fmt::print("Error: `exec` and `compile` not allowed at the same time. Run without arguments either of these arguments to compile and interpret source code in one go.\n");
         return 1;
+    }
+
+    if (cfg.decompile) {
+        std::srand(0);
+        for (const auto& filename : cfg.files) {
+            fmt::print("# decompiled from '{}'\n"
+                       "# all label names are generated pseudo-randomly\n",
+                filename);
+            std::ifstream file(filename.data(), std::ios::binary);
+            InstrStream instrs;
+            instrs.resize(std::filesystem::file_size(filename.data()));
+            file.read(reinterpret_cast<char*>(instrs.data()), std::streamsize(instrs.size() * sizeof(Instr)));
+            std::unordered_map<size_t, std::string> labels;
+            size_t i = 0;
+            constexpr const char ak[] = "bcdfghjklmnprstvws";
+            constexpr const char av[] = "aeuioy";
+            for (const auto& instr : instrs) {
+                // is jump?
+                if (instr.s.op >= JE) {
+                    auto off = size_t(std::rand());
+                    labels[size_t(instr.s.val)] = fmt::format("{}{}{}{}{}{}",
+                        ak[(i + off) % (sizeof(ak) - 1)],
+                        av[(i + off / 2) % (sizeof(av) - 1)],
+                        ak[(i + off / 3) % (sizeof(ak) - 1)],
+                        av[(i + off / 4) % (sizeof(av) - 1)],
+                        ak[(i + off / 5) % (sizeof(ak) - 1)],
+                        av[(i + off / 6) % (sizeof(av) - 1)]);
+                }
+                ++i;
+            }
+            i = 0;
+            for (const auto& instr : instrs) {
+                if (instr.s.op == NOT_AN_INSTRUCTION) {
+                    fmt::print("# encountered NOT_AN_INSTRUCTION, assuming end of file\n");
+                    break;
+                }
+                if (labels.contains(i)) {
+                    fmt::print("\n:{} \t # addr={}\n", labels[i], i);
+                }
+                if (instr.s.op >= JE) {
+                    auto val = size_t(instr.s.val);
+                    fmt::print("{} :{} \t # ->{}\n", to_string(instr.s.op), labels.at(val), val);
+                } else if (op_requires_i64_argument(instr.s.op)) {
+                    auto val = int64_t(instr.s.val);
+                    if (val > 100'000 && val % 1000 != 0) {
+                        fmt::print("{} 0x{:x}\n", to_string(instr.s.op), val);
+                    } else {
+                        fmt::print("{} {}\n", to_string(instr.s.op), val);
+                    }
+                } else {
+                    fmt::print("{}\n", to_string(instr.s.op));
+                }
+                ++i;
+            }
+        }
+        return 0;
     }
 
     bool interpret = !cfg.compile_only && !cfg.exec_only;
@@ -102,12 +168,14 @@ int main(int argc, char** argv) {
                 return 1;
             }
 
-            auto err = optimize_substitute(abstract_instrs);
-            if (err) {
-                fmt::print("Error while applying substitution optimizations: {}\n", err.error);
-                return 1;
-            } else {
-                fmt::print("Applied substitution optimizations resulting in {} abstract instructions.\n", abstract_instrs.size());
+            if (cfg.optimize) {
+                auto err = optimize_substitute(abstract_instrs);
+                if (err) {
+                    fmt::print("Error while applying substitution optimizations: {}\n", err.error);
+                    return 1;
+                } else {
+                    fmt::print("Applied substitution optimizations resulting in {} abstract instructions.\n", abstract_instrs.size());
+                }
             }
 
             auto finalize_res = finalize(std::move(abstract_instrs));

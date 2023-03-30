@@ -299,7 +299,72 @@ static Error optimize_substitute_inc(AbstractInstrStream& abstracts) {
     }
     std::reverse(to_remove.begin(), to_remove.end());
     for (size_t i : to_remove) {
-        abstracts.erase(abstracts.begin() + i);
+        abstracts.erase(abstracts.begin() + long(i));
+    }
+    return {};
+}
+
+/// Replace `push 1; sub` with `dec`
+static Error optimize_substitute_dec(AbstractInstrStream& abstracts) {
+    std::vector<size_t> to_remove {};
+    for (size_t i = 0; i < abstracts.size() - 1; ++i) {
+        Op& op = abstracts[i].instr.s.op;
+        Op& next_op = abstracts[i + 1].instr.s.op;
+
+        int64_t val = abstracts[i].instr.s.val;
+        if (op == PUSH && val == 1
+            && next_op == SUB) {
+            to_remove.push_back(i + 1);
+            op = DEC;
+            val = 0;
+        }
+        abstracts[i].instr.s.val = val;
+    }
+    std::reverse(to_remove.begin(), to_remove.end());
+    for (size_t i : to_remove) {
+        abstracts.erase(abstracts.begin() + long(i));
+    }
+    return {};
+}
+
+/// Replace `push 0; je` with `jz`
+static Error optimize_substitute_jz(AbstractInstrStream& abstracts) {
+    std::vector<size_t> to_remove {};
+    for (size_t i = 0; i < abstracts.size() - 1; ++i) {
+        Op& op = abstracts[i].instr.s.op;
+        Op& next_op = abstracts[i + 1].instr.s.op;
+
+        int64_t val = abstracts[i].instr.s.val;
+        if (op == PUSH && val == 0
+            && next_op == JE) {
+            to_remove.push_back(i);
+            next_op = JZ;
+        }
+    }
+    std::reverse(to_remove.begin(), to_remove.end());
+    for (size_t i : to_remove) {
+        abstracts.erase(abstracts.begin() + long(i));
+    }
+    return {};
+}
+
+/// Replace `push 0; jn` with `jnz`
+static Error optimize_substitute_jnz(AbstractInstrStream& abstracts) {
+    std::vector<size_t> to_remove {};
+    for (size_t i = 0; i < abstracts.size() - 1; ++i) {
+        Op& op = abstracts[i].instr.s.op;
+        Op& next_op = abstracts[i + 1].instr.s.op;
+
+        int64_t val = abstracts[i].instr.s.val;
+        if (op == PUSH && val == 0
+            && next_op == JN) {
+            to_remove.push_back(i);
+            next_op = JNZ;
+        }
+    }
+    std::reverse(to_remove.begin(), to_remove.end());
+    for (size_t i : to_remove) {
+        abstracts.erase(abstracts.begin() + long(i));
     }
     return {};
 }
@@ -317,13 +382,25 @@ static Error optimize_substitute_dup2(AbstractInstrStream& abstracts) {
     }
     std::reverse(to_remove.begin(), to_remove.end());
     for (size_t i : to_remove) {
-        abstracts.erase(abstracts.begin() + i);
+        abstracts.erase(abstracts.begin() + long(i));
     }
     return {};
 }
 
 Error optimize_substitute(AbstractInstrStream& abstracts) {
     auto err = optimize_substitute_inc(abstracts);
+    if (err) {
+        return err;
+    }
+    err = optimize_substitute_dec(abstracts);
+    if (err) {
+        return err;
+    }
+    err = optimize_substitute_jz(abstracts);
+    if (err) {
+        return err;
+    }
+    err = optimize_substitute_jnz(abstracts);
     if (err) {
         return err;
     }

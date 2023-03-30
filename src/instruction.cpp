@@ -34,6 +34,8 @@ std::string_view to_string(Op op) {
         return "dup2";
     case SWAP:
         return "swap";
+    case CLEAR:
+        return "clear";
     case OVER:
         return "over";
     case JE:
@@ -50,6 +52,10 @@ std::string_view to_string(Op op) {
         return "jle";
     case JMP:
         return "jmp";
+    case JZ:
+        return "jz";
+    case JNZ:
+        return "jnz";
     }
     return "not_an_instruction";
 }
@@ -83,6 +89,8 @@ Op op_from_string(const std::string& str) {
         return DUP2;
     } else if (str == "swap") {
         return SWAP;
+    } else if (str == "clear") {
+        return CLEAR;
     } else if (str == "over") {
         return OVER;
     } else if (str == "je") {
@@ -99,6 +107,10 @@ Op op_from_string(const std::string& str) {
         return JLE;
     } else if (str == "jmp") {
         return JMP;
+    } else if (str == "jz") {
+        return JZ;
+    } else if (str == "jnz") {
+        return JNZ;
     } else {
         return NOT_AN_INSTRUCTION;
     }

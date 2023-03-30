@@ -21,6 +21,7 @@ enum Op : uint8_t {
     DUP,
     DUP2,
     SWAP,
+    CLEAR,
     OVER,
 
     // with string argument
@@ -37,6 +38,9 @@ enum Op : uint8_t {
     JGE,
     JLE,
     JMP,
+    // special
+    JZ,
+    JNZ,
 };
 
 std::string_view to_string(Op op);
