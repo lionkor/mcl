@@ -94,6 +94,7 @@ Error execute(InstrStream&& instrs) noexcept {
         .instrs = std::move(instrs),
         .pc = 0,
     };
+    prog.instrs.push_back(Instr { .s = { .op = HALT, .val = 0 } });
 
     while (true) {
 #ifdef _DEBUG
