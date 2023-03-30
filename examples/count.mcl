@@ -3,7 +3,9 @@ push 1
 push 1
 add
 dup
-push 10000000
+dup
+print
+push 1000
 jn :start
 halt
 
