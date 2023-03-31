@@ -66,12 +66,15 @@ If the jump is conditional, for example with `je` (jump if equal), the following
 
 ## Jumps to raw addresses
 
+**DO NOT** jump to raw addresses. There is no reason to do so. If you do, turn off optimizations with `--dont-optimize`, as currently the optimizer may remove or change instructions at a raw address jump target (optimization happens before absolute addresses can be calculated).
+
 You *may* jump without labels, by simply using addresses. Consider the following (complete) program:
 
 ```nasm
 push 1
 push 2
 add
+dup
 print
 jmp 1
 ```
