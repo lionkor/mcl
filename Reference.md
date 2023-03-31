@@ -110,3 +110,4 @@ An instruction looks as follows:
 
 That is, one byte instruction, and 7 bytes value.
 Each argument, e.g. the IMM of the `push` instruction, is thus at most a 56 bit integer.
+The stack itself operates on 64 bit integers.
