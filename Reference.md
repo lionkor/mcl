@@ -54,7 +54,7 @@ dup2		duplicates the top two stack values, <=> `over over`.
 jz, jnz 	jumps to the specified address or label, if the top stack value is (not)
 <ADDR/LBL>	zero. <=> `push 0 je <ADDR/LABEL>` or with `jn`.
 inc		increments the stack top value by 1. <=> `push 1 add`.
-dec		decrements the stack top value by 1. <=> 
+dec		decrements the stack top value by 1. <=> `push 1 sub`.
 ``` 
 
 ## Labels
