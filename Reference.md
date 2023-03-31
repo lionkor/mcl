@@ -4,6 +4,8 @@
 
 ## "Registers"
 
+These are internal to the VM's "processor", and are modified by instructions. For example, `push` modifies `st`, and `jmp :somewhere` modifies `pc`.
+
 - `pc`: Program counter
 - `st`: Stack top (one above the top stack element)
 
@@ -15,10 +17,8 @@ Quick guide to reading the instructions:
 - `<IMM>` = immediate value, like `42`
 - `<ADDR>` = address
 - `<LBL>` = label (for example `:something`)
-- `++abc`, `abc+2`, ... = increments register `abc`
-- `--abc`, `abc-2`, ... = decrements register `abc`
 
-All instructions:
+Normal instructions:
 
 ```
 push <IMM>	pushes value on the stack.
@@ -37,11 +37,25 @@ div, mod	divides or performs modulo on the two top values on the stack,
 dup		duplicates the value on the top of the stack.
 swap		swaps the top 2 values on the stack with each other.
 over		duplicates the value at 1-depth on the stack.
-jmp <ADDR/LBL>	jumps to the specified address or label.
+jmp <ADDR/LBL>jumps to the specified address or label.
 je,jn,jl,jg,	jumps to the specified address or label IF the condition is satisfied.
-jle,jge		e = equal, n = not equal, l = less than, g = greater than. all others are 
+jle,jge	e = equal, n = not equal, l = less than, g = greater than. all others are 
 <ADDR/LBL>	combinations of these.
 ```
+
+Advanced instructions:
+
+*These are part of the core language, but they are equivalent to some combinations of "normal" instructions. Therefore, you should only use these if it makes your program more readable or easier to understand. The optimizer will use these to replace equivalent constructs, so you can write either.*
+
+Equivalent "normal" instructions are shown behind `<=>`.
+
+```
+dup2		duplicates the top two stack values, <=> `over over`.
+jz, jnz 	jumps to the specified address or label, if the top stack value is (not)
+<ADDR/LBL>	zero. <=> `push 0 je <ADDR/LABEL>` or with `jn`.
+inc		increments the stack top value by 1. <=> `push 1 add`.
+dec		decrements the stack top value by 1. <=> 
+``` 
 
 ## Labels
 
